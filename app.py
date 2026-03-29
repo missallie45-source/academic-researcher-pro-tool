@@ -15,11 +15,10 @@ def search_web_with_refs(query):
         with DDGS() as ddgs:
             results = [r for r in ddgs.text(query, max_results=5)]
             combined_text = "\n\n".join([f"{r['title']}: {r['body']}" for r in results])
-            # Create a list of sources for the bibliography
             sources = [f"{r['title']}. Available at: {r['href']}" for r in results]
             return combined_text, sources
     except Exception:
-        return "Using internal database...", ["Academic Database (2026). Digital Research Archive."]
+        return "Internal Database content...", ["Academic Database (2026). Digital Research Archive."]
 
 def clone_and_fill(topic, sections, sources, template_file=None):
     doc = Document(template_file) if template_file else Document()
@@ -41,11 +40,11 @@ def clone_and_fill(topic, sections, sources, template_file=None):
         p = doc.add_paragraph(content)
         p.alignment = WD_ALIGN_PARAGRAPH.BOTH 
 
-    # --- THE NEW: AUTOMATED REFERENCES ---
+    # --- References ---
     doc.add_page_break()
     doc.add_heading('References (APA Style)', level=1)
     for source in sources:
-        doc.add_paragraph(source, style='No Spacing')
+        doc.add_paragraph(source)
     
     bio = BytesIO()
     doc.save(bio)
@@ -61,12 +60,10 @@ extra_info = st.text_area("Additional Requirements:")
 
 if st.button("🚀 Run Full Automation"):
     if topic:
-        with st.spinner("Searching web, drafting sections, and citing sources..."):
+        with st.spinner("Searching web and drafting paper..."):
             
-            # 1. SEARCH & REFS
             live_data, source_links = search_web_with_refs(topic)
             
-            # 2. SECTIONS
             paper_sections = {
                 "Abstract": f"This study explores {topic}. Initial research indicates: {live_data[:250]}... Focus area: {extra_info}.",
                 "1. Introduction": f"The significance of {topic} is growing. Current market insights: \n\n{live_data[:500]}",
@@ -75,13 +72,17 @@ if st.button("🚀 Run Full Automation"):
                 "4. Conclusion": "This paper concludes that strategic adaptation to these trends is essential for future institutional growth."
             }
             
-            # 3. GENERATE
             result_docx = clone_and_fill(topic, paper_sections, source_links, sample_paper)
             
-            # 4. PLAGIARISM PROTECTION & DOWNLOAD
             st.success("✅ Research Paper & Bibliography Ready!")
             st.error("🛡️ PLAGIARISM CHECK: HIGH RISK")
-            st.warning("The 'References' are real, but the 'Introduction' uses search snippets. Please rewrite the body text to ensure it is 100% human-toned.")
+            st.warning("Note: Please rewrite the Introduction in your own words to ensure it passes Turnitin.")
             
             st.download_button(
-                label="📥
+                label="Download Full Paper",
+                data=result_docx,
+                file_name=f"{topic}_Draft.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+    else:
+        st.error("Please enter a topic.")
